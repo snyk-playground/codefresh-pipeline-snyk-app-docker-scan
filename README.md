@@ -1,12 +1,12 @@
 [logo]: https://res.cloudinary.com/snyk/image/upload/v1533761770/logo-1_wtob68.svg
 ![Snyk Security Scanning](https://res.cloudinary.com/snyk/image/upload/v1533761770/logo-1_wtob68.svg)
 # Snyk Codefresh Example
-This example application has a sample application along with a Codefresh pipeline that can build, scan, and promote a Docker image. 
+This example application has a sample application along with a Codefresh pipeline that can build, scan, and promote a Docker image.
 
-*Warning* These instructions are incomplete. Some variables in the pipeline need to be updated to match your environment. Update coming soon. 
+*Warning* These instructions are incomplete. Some variables in the pipeline need to be updated to match your environment. Update coming soon.
 ## Using the plugin
 ### Scan Code
-``` 
+```
 RunningUnitTests:
     stage: scan
     title: Running Unit Tests
@@ -20,7 +20,7 @@ RunningUnitTests:
       name: unit_test_script
       content: |-
         npm install -g snyk
-        snyk test || true
+        snyk test
     on_success:
       metadata:
         set:
@@ -53,6 +53,9 @@ RunningUnitTests:
           environment:
           - SNYK_TOKEN=${{SNYK_TOKEN}}
           - SNYK_ORG=${{SNYK_ORG}}
+          - CFCR_ACCOUNT=${{CFCR_ACCOUNT}}
+          - CF_USER_NAME=${{CF_USER_NAME}}
+          - CFCR_LOGIN_TOKEN=${{CFCR_LOGIN_TOKEN}}
           depends_on:
             - targetimage
           volumes: # Volumes required to run DIND
@@ -69,35 +72,39 @@ RunningUnitTests:
         metadata: # Declare the metadata attribute
           set: # Specify the set operation
             - ${{BuildingDockerImage.imageId}}: # Select any number of target images
-              - SECURITY_SCAN: false 
+              - SECURITY_SCAN: false
 ```
 
 ## Instructions
 
-### Pre-requisites 
+### Pre-requisites
 - [Codefresh account](https://codefresh.io/) (free or paid)
-- [Snyk account](https://snyk.io/) (free or paid)
+- [Snyk account](https://snyk.io/) (free or paid - Docker scanning is a paid feature, contact Snyk at snyk.io about it)
 - Dockerhub account (Optional)
 
 ### Add Repo to Codefresh
 Signin to Codefresh and click "Add Repository" from the [repositories screen](https://g.codefresh.io/repositories). Paste in the url for this repo and click next. Then select "I have a Codefresh.yml" and put `./.codefresh/codefresh.yml` for the path. This will preview the Codefresh yaml, then follow the instructions to finish creating the pipeline.
 
-### Add Environmental Variables 
+### Add Environmental Variables
 You can type in the variables by hand, or just copy and paste the following:
 ```
 PORT=8080
-SNYK_ORG=aarlaud-snyk-demo
-IMAGE_NAME=aarlaudsnyk/trainingapp
-SNYK_TOKEN=addapikeyhere
+SNYK_ORG=<your snyk organization name>
+IMAGE_NAME=<imagename of your choice>
+SNYK_TOKEN=<Snyk API token>
+CFCR_ACCOUNT=<your Codefresh Registry account>
+CF_USER_NAME=<your Codefresh username>
+CFCR_LOGIN_TOKEN=<your Codefresh Registry login token>
 ```
 
-Select "Import from Text" to import. 
+Select "Import from Text" to import.
 
-We'll also add a token from Snyk. You can get this from your [Snyk account settings](https://app.snyk.io/account). Add this variable with `SNYK_TOKEN` as the key. Then check encrypt to store the token securely. 
+We'll also add a token from Snyk. You can get this from your [Snyk account settings](https://app.snyk.io/account). Add this variable with `SNYK_TOKEN` as the key. Then check encrypt to store the token securely.
+The Codefresh registry bit is optional (remove the lines from the yaml if you do not want to use it). We are testing the docker image built and stored in Codefresh registry before pushing it to Docker Hub if all Snyk tests are successful.
 
 ### Add Dockerhub (optional)
 Codefresh has a built-in private Docker registry. In this example we're building and pushing a public image so we'll use Docker hub. Follow the instructions in the [Docker Registry integration page](https://g.codefresh.io/account-conf/integration/registry).
 
-You can skip this step by removing the promote to Dockerhub step. 
+You can skip this step by removing the promote to Dockerhub step.
 
-### Go run your pipelne. 
+### Go run your pipelne.
