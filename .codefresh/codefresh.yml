@@ -1,0 +1,99 @@
+version: '1.0'
+stages:
+- scan
+- promote
+steps:
+  BuildingDockerImage:
+    title: Building Docker Image
+    type: build
+    image_name: ${{IMAGE_NAME}}
+    working_directory: ./
+    tag: '${{CF_BRANCH_TAG_NORMALIZED}}'
+    dockerfile:
+      content: |-
+        FROM node:8.0-alpine AS builder
+
+        WORKDIR /app
+
+        COPY package.json /app
+
+        # Creating tar of productions dependencies
+        RUN npm install --production && cp -rp ./node_modules /tmp/node_modules
+
+        # Installing all dependencies
+        RUN npm install
+
+        # Copying application code
+        COPY . /app
+
+  SnykAppScan:
+    title: Snyk Test Application Dependencies
+    stage: scan
+    image: '${{BuildingDockerImage}}'
+    working_directory: IMAGE_WORK_DIR
+    environment:
+      - SNYK_TOKEN=${{SNYK_TOKEN}}
+      - SNYK_ORG=${{SNYK_ORG}}
+    commands:
+      - npm install -g snyk
+      - snyk test --severity-threshold=high
+    on_success:
+      metadata:
+        set:
+          - '${{BuildingDockerImage.imageId}}':
+              - CF_QUALITY: true
+    on_fail:
+      metadata:
+        set:
+          - '${{BuildingDockerImage.imageId}}':
+              - CF_QUALITY: false
+
+
+  SnykScanImage:
+      title: Snyk Test Docker OS Dependencies
+      stage: scan
+      type: composition
+      composition:
+        version: '2'
+        services:
+          targetimage:
+            image: ${{BuildingDockerImage}} # Must be the Docker build step name
+            command: sh -c "exit 0"
+            labels:
+              build.image.id: ${{CF_BUILD_ID}} # Provides a lookup for the composition
+      composition_candidates:
+        scan_service:
+          image: aarlaudsnyk/snyk-container-scan-docker
+          command: python snyk-cli.py "${{IMAGE_NAME}}:${{CF_BRANCH_TAG_NORMALIZED}}"
+          environment:
+          - SNYK_TOKEN=${{SNYK_TOKEN}}
+          - SNYK_ORG=${{SNYK_ORG}}
+          - CFCR_ACCOUNT=${{CFCR_ACCOUNT}}
+          - CF_USER_NAME=${{CF_USER_NAME}}
+          - CFCR_LOGIN_TOKEN=${{CFCR_LOGIN_TOKEN}}
+          depends_on:
+            - targetimage
+          volumes: # Volumes required to run DIND
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /var/lib/docker:/var/lib/docker
+      add_flow_volume_to_composition: true
+      on_success: # Execute only once the step succeeded
+        metadata: # Declare the metadata attribute
+          set: # Specify the set operation
+            - ${{BuildingDockerImage.imageId}}: # Select any number of target images
+              - SECURITY_SCAN: true
+
+      on_fail: # Execute only once the step failed
+        metadata: # Declare the metadata attribute
+          set: # Specify the set operation
+            - ${{BuildingDockerImage.imageId}}: # Select any number of target images
+              - SECURITY_SCAN: false 
+
+
+  PushingToDockerRegistry:
+    title: Pushing to Docker Registry
+    stage: promote
+    type: push
+    candidate: '${{BuildingDockerImage}}'
+    tag: '${{CF_BRANCH_TAG_NORMALIZED}}'
+    registry: aarlaudsnyk
