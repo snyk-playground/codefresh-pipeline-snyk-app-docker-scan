@@ -3,24 +3,21 @@
 # Snyk Codefresh Example
 This example application has a sample application along with a Codefresh pipeline that can build, scan, and promote a Docker image.
 
-*Warning* These instructions are incomplete. Some variables in the pipeline need to be updated to match your environment. Update coming soon.
+*Notice* These instructions are new, if you run into any issues running this yourself, please create an issue. 
 ## Using the plugin
 ### Scan Code
 ```
-RunningUnitTests:
+  SnykAppScan:
+    title: Snyk Test Application Dependencies
     stage: scan
-    title: Running Unit Tests
     image: '${{BuildingDockerImage}}'
     working_directory: IMAGE_WORK_DIR
-    entry_point:
-      - /bin/sh
-      - /codefresh/volume/cf-generated/unit_test_script
-    create_file:
-      path: /codefresh/volume/cf-generated
-      name: unit_test_script
-      content: |-
-        npm install -g snyk
-        snyk test
+    environment:
+      - SNYK_TOKEN=${{SNYK_TOKEN}}
+      - SNYK_ORG=${{SNYK_ORG}}
+    commands:
+      - npm install -g snyk
+      - snyk test --severity-threshold=high
     on_success:
       metadata:
         set:
@@ -105,6 +102,6 @@ The Codefresh registry bit is optional (remove the lines from the yaml if you do
 ### Add Dockerhub (optional)
 Codefresh has a built-in private Docker registry. In this example we're building and pushing a public image so we'll use Docker hub. Follow the instructions in the [Docker Registry integration page](https://g.codefresh.io/account-conf/integration/registry).
 
-You can skip this step by removing the promote to Dockerhub step.
+You can skip this step by removing the promote to Dockerhub step. If using your own registry, update the name in the push to repo step at the end of the pipeline. 
 
 ### Go run your pipelne.
