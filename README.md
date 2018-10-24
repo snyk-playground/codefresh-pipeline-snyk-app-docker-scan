@@ -1,5 +1,6 @@
 [logo]: https://res.cloudinary.com/snyk/image/upload/v1533761770/logo-1_wtob68.svg
 ![Snyk Security Scanning](https://res.cloudinary.com/snyk/image/upload/v1533761770/logo-1_wtob68.svg)
+[![Codefresh build status]( https://g.codefresh.io/api/badges/pipeline/aarlaud/snyk-playground%2Fcodefresh-pipeline-snyk-app-docker-scan%2Fcodefresh-pipeline-snyk-app-docker-scan?branch=master&type=cf-2)]( https://g.codefresh.io/repositories/snyk-playground/codefresh-pipeline-snyk-app-docker-scan/builds?filter=trigger:build;branch:master;service:5bcfd52a9fd1f422617b0eb3~codefresh-pipeline-snyk-app-docker-scan)
 # Snyk Codefresh Example
 This example application has a sample application along with a Codefresh pipeline that can build, scan, and promote a Docker image.
 
